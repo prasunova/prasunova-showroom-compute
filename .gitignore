@@ -1,0 +1,14 @@
+# Client business data — not committed to repo
+# This data lives in Supabase (SH_tiles, SH_rooms) + Cloudflare R2
+clients/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db

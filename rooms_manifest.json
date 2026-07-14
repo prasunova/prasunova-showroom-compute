@@ -1,10 +1,26 @@
 [
   { "room_id": "balcony_01",     "category": "balcony" },
+  { "room_id": "balcony_02",     "category": "balcony" },
+  { "room_id": "balcony_03",     "category": "balcony" },
   { "room_id": "bathroom_01",    "category": "bathroom" },
+  { "room_id": "bathroom_02",    "category": "bathroom" },
+  { "room_id": "bathroom_03",    "category": "bathroom" },
   { "room_id": "bedroom_01",     "category": "bedroom" },
+  { "room_id": "bedroom_02",     "category": "bedroom" },
+  { "room_id": "bedroom_03",     "category": "bedroom" },
   { "room_id": "entrance_01",    "category": "entrance" },
+  { "room_id": "entrance_02",    "category": "entrance" },
+  { "room_id": "entrance_03",    "category": "entrance" },
   { "room_id": "kitchen_01",     "category": "kitchen" },
+  { "room_id": "kitchen_02",     "category": "kitchen" },
+  { "room_id": "kitchen_03",     "category": "kitchen" },
   { "room_id": "living_room_01", "category": "living_room" },
+  { "room_id": "living_room_02", "category": "living_room" },
+  { "room_id": "living_room_03", "category": "living_room" },
   { "room_id": "shower_01",      "category": "shower" },
-  { "room_id": "toilet_01",      "category": "toilet" }
+  { "room_id": "shower_02",      "category": "shower" },
+  { "room_id": "shower_03",      "category": "shower" },
+  { "room_id": "toilet_01",      "category": "toilet" },
+  { "room_id": "toilet_02",      "category": "toilet" },
+  { "room_id": "toilet_03",      "category": "toilet" }
 ]

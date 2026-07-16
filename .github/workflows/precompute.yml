@@ -17,7 +17,10 @@ on:
 jobs:
   segment:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # SAM 3 runs on CPU here. A full 24-room precompute now segments every room
+    # for real (previously half of them failed fast), and unmatched prompts retry
+    # with fallbacks, so 60 minutes is no longer a safe ceiling.
+    timeout-minutes: 180
 
     env:
       HUGGING_FACE_HUB_TOKEN: ${{ secrets.HF_TOKEN }}

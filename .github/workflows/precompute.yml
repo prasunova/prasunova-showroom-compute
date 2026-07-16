@@ -13,6 +13,11 @@ on:
       category:
         description: "Required only when room_id is set (e.g. kitchen, bathroom, living_room)"
         required: false
+      force_all:
+        description: "Re-segment rooms that ALREADY have masks, overwriting them. Leave false to only fill in missing rooms."
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   segment:
@@ -49,6 +54,8 @@ jobs:
 
       - name: Run SAM 3 segmentation (all rooms in rooms_manifest.json)
         if: ${{ inputs.room_id == '' }}
+        env:
+          FORCE_ALL: ${{ inputs.force_all }}
         run: python scripts/segment_sam3.py --mode precompute_all
 
       - name: Run SAM 3 segmentation (single room)

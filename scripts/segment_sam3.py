@@ -178,11 +178,31 @@ def run_precompute_all(model, processor, device):
 
     r2     = get_r2()
     bucket = os.environ['R2_BUCKET_NAME']
-    succeeded, failed = [], []
+    succeeded, failed, skipped = [], [], []
+
+    # Re-segmenting a room that already has a good mask costs CPU minutes and
+    # overwrites known-good output for no gain, so by default only fill the gaps.
+    # Set FORCE_ALL=true to rebuild every mask from scratch.
+    force_all = os.environ.get('FORCE_ALL', '').lower() in ('1', 'true', 'yes')
+    if force_all:
+        print("[PRECOMPUTE_ALL] FORCE_ALL set — every room will be re-segmented and overwritten.")
+    else:
+        print("[PRECOMPUTE_ALL] Skipping rooms that already have a floor mask (set FORCE_ALL=true to override).")
+
+    def has_mask(room_id):
+        try:
+            r2.head_object(Bucket=bucket, Key=f"rooms/{room_id}/floor_mask.png")
+            return True
+        except Exception:
+            return False
 
     for entry in rooms:
         room_id, category = entry['room_id'], entry['category']
         print(f"\n=== {room_id} ({category}) ===")
+        if not force_all and has_mask(room_id):
+            print(f"[SKIP] {room_id} already has floor_mask.png")
+            skipped.append(room_id)
+            continue
         try:
             key   = f"rooms/{room_id}/original.jpg"
             image = r2_read_image(r2, bucket, key)
@@ -207,10 +227,12 @@ def run_precompute_all(model, processor, device):
             r2_write_json(r2, bucket, f"rooms/{room_id}/error.json", {"error": str(e), "room_id": room_id})
             failed.append(room_id)
 
-    print(f"\n[SUMMARY] {len(succeeded)} succeeded, {len(failed)} failed.")
-    if succeeded: print(f"  OK:     {', '.join(succeeded)}")
-    if failed:    print(f"  FAILED: {', '.join(failed)}")
-    if not succeeded:
+    print(f"\n[SUMMARY] {len(succeeded)} succeeded, {len(failed)} failed, {len(skipped)} skipped (already had masks).")
+    if succeeded: print(f"  OK:      {', '.join(succeeded)}")
+    if failed:    print(f"  FAILED:  {', '.join(failed)}")
+    if skipped:   print(f"  SKIPPED: {', '.join(skipped)}")
+    # Nothing to do is success: every room already had a mask.
+    if not succeeded and not skipped:
         sys.exit(1)
 
 

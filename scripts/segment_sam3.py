@@ -91,24 +91,53 @@ def load_model():
     print(f"[SAM3] Ready on {device}")
     return model, processor, device
 
+# The category prompts name a fixture ("kitchen floor tiles", "toilet floor
+# tiles"). SAM 3 segments by concept, so if the photo has no kitchen or no
+# toilet in frame it matches nothing and returns zero masks — even when the
+# floor is plainly visible and perfectly tileable. That is exactly how
+# kitchen_02/03 and toilet_02/03 failed: bare rooms with obvious floors and no
+# fixture. These fallbacks drop the room context and ask for the surface alone.
+FALLBACK_PROMPTS = {
+    "floor": ["floor tiles", "tiled floor", "floor"],
+    "wall":  ["wall tiles", "tiled wall", "wall"],
+}
+
+
+def _segment_one(image, prompt, model, processor, device):
+    """Run SAM 3 for a single text prompt. Returns a uint8 mask or None."""
+    inputs = processor(images=image, text=prompt, return_tensors="pt").to(device)
+    with torch.no_grad():
+        outputs = model(**inputs)
+    results = processor.post_process_instance_segmentation(
+        outputs, threshold=0.5, mask_threshold=0.5,
+        target_sizes=inputs.get("original_sizes").tolist()
+    )[0]
+    if len(results["masks"]) == 0:
+        return None
+    return results["masks"].any(dim=0).cpu().numpy().astype(np.uint8) * 255
+
+
 def segment_image(image, category, model, processor, device):
     prompts = PROMPTS.get(category, {"floor": "floor tiles"})
     masks   = {}
     for surface, prompt in prompts.items():
-        print(f"[SAM3] Segmenting '{surface}': \"{prompt}\"")
-        inputs  = processor(images=image, text=prompt, return_tensors="pt").to(device)
-        with torch.no_grad():
-            outputs = model(**inputs)
-        results = processor.post_process_instance_segmentation(
-            outputs, threshold=0.5, mask_threshold=0.5,
-            target_sizes=inputs.get("original_sizes").tolist()
-        )[0]
-        if len(results["masks"]) > 0:
-            combined = results["masks"].any(dim=0).cpu().numpy().astype(np.uint8) * 255
+        # Try the category-specific prompt first: it is the most precise when the
+        # room really does show the fixture. Then widen until something matches.
+        attempts = [prompt] + [p for p in FALLBACK_PROMPTS.get(surface, []) if p != prompt]
+        combined = None
+        for attempt in attempts:
+            print(f"[SAM3] Segmenting '{surface}': \"{attempt}\"")
+            combined = _segment_one(image, attempt, model, processor, device)
+            if combined is not None:
+                if attempt != prompt:
+                    print(f"[SAM3] NOTE: '{prompt}' matched nothing; fell back to \"{attempt}\"")
+                break
+            print(f"[SAM3] no match for \"{attempt}\"")
+        if combined is not None:
             masks[surface] = combined
             print(f"[SAM3] '{surface}' coverage: {combined.mean() / 255 * 100:.1f}%")
         else:
-            print(f"[SAM3] WARNING: no masks for '{surface}'")
+            print(f"[SAM3] WARNING: no masks for '{surface}' after {len(attempts)} prompts")
             masks[surface] = None
     return masks
 
